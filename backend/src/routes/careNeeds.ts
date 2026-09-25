@@ -138,12 +138,41 @@ router.post('/:id/accept', authenticate, requireRole('worker', 'volunteer'), asy
       return res.status(400).json({ message: '该需求已被接单' });
     }
 
-    const result = await pool.query(
-      'UPDATE care_needs SET status = $1, worker_id = $2, accepted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
-      ['accepted', req.user?.id, req.params.id]
+    // 检查接单后是否与护工已有未结束订单时段冲突
+    const overlapResult = await pool.query(
+      `SELECT 1
+         FROM care_needs
+        WHERE id <> $1
+          AND worker_id = $2
+          AND status IN ('pending', 'accepted', 'in_progress')
+          AND start_time < COALESCE($4::timestamp, $3::timestamp + INTERVAL '1 hour')
+          AND COALESCE(end_time, start_time + INTERVAL '1 hour') > $3::timestamp
+        LIMIT 1`,
+      [
+        req.params.id,
+        req.user?.id,
+        checkResult.rows[0].start_time,
+        checkResult.rows[0].end_time,
+      ]
     );
 
-    res.json({ message: '接单成功', need: result.rows[0] });
+    if (overlapResult.rows.length > 0) {
+      return res.status(409).json({ message: '该订单时段与您已有未结束订单冲突，无法接单' });
+    }
+
+    try {
+      const result = await pool.query(
+        'UPDATE care_needs SET status = $1, worker_id = $2, accepted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
+        ['accepted', req.user?.id, req.params.id]
+      );
+      res.json({ message: '接单成功', need: result.rows[0] });
+    } catch (e: any) {
+      // 并发兜底：数据库时段排他约束
+      if (e.code === '23P01') {
+        return res.status(409).json({ message: '该订单时段与您已有未结束订单冲突，无法接单' });
+      }
+      throw e;
+    }
   } catch (error) {
     sendServerError(res, error);
   }

@@ -39,8 +39,8 @@ const Favorites = () => {
     navigate('/messages', { state: { userId: workerId } });
   };
 
-  const handleBook = (_workerId: string) => {
-    navigate('/publish');
+  const handleBook = (workerId: string) => {
+    navigate('/recurring', { state: { workerId } });
   };
 
   return (
@@ -92,7 +92,7 @@ const Favorites = () => {
                       size="small"
                       onClick={() => handleBook(item.worker_id)}
                     >
-                      预约
+                      常护安排
                     </Button>
                     <Button
                       size="small"

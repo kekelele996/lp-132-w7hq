@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
 import Schedule from './pages/Schedule';
 import IncomeRanking from './pages/IncomeRanking';
+import RecurringCare from './pages/RecurringCare';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token } = useAuthStore();
@@ -73,6 +74,16 @@ function App() {
           <ProtectedRoute>
             <RoleRoute allowedRoles={['child', 'admin']}>
               <Favorites />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/recurring"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['child', 'admin']}>
+              <RecurringCare />
             </RoleRoute>
           </ProtectedRoute>
         }

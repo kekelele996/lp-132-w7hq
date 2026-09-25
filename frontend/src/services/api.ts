@@ -83,4 +83,10 @@ export const scheduleApi = {
   getIncome: (params?: any) => api.get('/schedules/income', { params }),
 };
 
+export const recurringApi = {
+  create: (data: any) => api.post('/recurring', data),
+  getMine: () => api.get('/recurring/mine'),
+  getMyTasks: () => api.get('/recurring/my-tasks'),
+};
+
 export default api;

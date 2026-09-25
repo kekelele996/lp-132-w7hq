@@ -11,6 +11,7 @@ import {
   LogoutOutlined,
   FileTextOutlined,
   StarOutlined,
+  ReconciliationOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
@@ -42,6 +43,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     { key: '/elderly', icon: <UserOutlined />, label: '老人档案' },
     { key: '/publish', icon: <FileTextOutlined />, label: '发布需求' },
     { key: '/my-orders', icon: <HeartOutlined />, label: '我的订单' },
+    { key: '/recurring', icon: <ReconciliationOutlined />, label: '常护安排' },
     { key: '/favorites', icon: <StarOutlined />, label: '收藏护工' },
     { key: '/messages', icon: <Badge count={unreadCount} size="small"><MessageOutlined /></Badge>, label: '消息中心' },
     { key: '/profile', icon: <SettingOutlined />, label: '个人中心' },
