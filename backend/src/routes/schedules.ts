@@ -9,9 +9,14 @@ router.get('/my', authenticate, requireRole('worker', 'volunteer'), async (req: 
   try {
     const { start_date, end_date } = req.query;
 
-    let query = `SELECT ws.*, cn.title as order_title, cn.address as order_address, cn.start_time as order_start_time, cn.status as order_status 
-                 FROM worker_schedules ws 
-                 LEFT JOIN care_needs cn ON ws.order_id = cn.id 
+    let query = `SELECT ws.*, cn.title as order_title, cn.address as order_address,
+                        cn.start_time as order_start_time, cn.end_time as order_end_time,
+                        cn.status as order_status, cn.price as order_price,
+                        e.name as elderly_name, u.real_name as child_name
+                 FROM worker_schedules ws
+                 LEFT JOIN care_needs cn ON ws.order_id = cn.id
+                 LEFT JOIN elderly_profiles e ON cn.elderly_id = e.id
+                 LEFT JOIN users u ON cn.child_id = u.id
                  WHERE ws.worker_id = $1`;
     const params: any[] = [req.user?.id];
 

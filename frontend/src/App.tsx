@@ -8,6 +8,7 @@ import PublishNeed from './pages/PublishNeed';
 import MessageCenter from './pages/MessageCenter';
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
+import RecurringCare from './pages/RecurringCare';
 import Schedule from './pages/Schedule';
 import IncomeRanking from './pages/IncomeRanking';
 
@@ -73,6 +74,16 @@ function App() {
           <ProtectedRoute>
             <RoleRoute allowedRoles={['child', 'admin']}>
               <Favorites />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/recurring-care"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={['child', 'admin']}>
+              <RecurringCare />
             </RoleRoute>
           </ProtectedRoute>
         }

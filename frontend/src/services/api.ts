@@ -83,4 +83,9 @@ export const scheduleApi = {
   getIncome: (params?: any) => api.get('/schedules/income', { params }),
 };
 
+export const recurringCareApi = {
+  create: (data: any) => api.post('/recurring-care', data),
+  getMy: () => api.get('/recurring-care/my'),
+};
+
 export default api;

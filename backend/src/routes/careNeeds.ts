@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { PoolClient } from 'pg';
 import pool from '../config/database';
 import { sendServerError } from '../utils/httpResponses';
 import { AuthRequest, authenticate, requireRole } from '../middleware/auth';
@@ -215,36 +216,71 @@ router.post('/:id/complete', authenticate, requireRole('worker', 'volunteer'), a
 });
 
 router.post('/:id/cancel', authenticate, async (req: AuthRequest, res: Response) => {
+  let client: PoolClient | undefined;
+  let inTransaction = false;
+
   try {
-    const checkResult = await pool.query(
-      'SELECT status, child_id, worker_id FROM care_needs WHERE id = $1',
+    client = await pool.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
+
+    const checkResult = await client.query(
+      'SELECT status, child_id, worker_id FROM care_needs WHERE id = $1 FOR UPDATE',
       [req.params.id]
     );
 
     if (checkResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(404).json({ message: '需求不存在' });
     }
 
     if (req.user?.role === 'child' && checkResult.rows[0].child_id !== req.user?.id) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(403).json({ message: '无权限操作' });
     }
 
     if ((req.user?.role === 'worker' || req.user?.role === 'volunteer') && checkResult.rows[0].worker_id !== req.user?.id) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(403).json({ message: '无权限操作' });
     }
 
     if (!['pending', 'accepted'].includes(checkResult.rows[0].status)) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(400).json({ message: '无法取消该订单' });
     }
 
-    const result = await pool.query(
+    const result = await client.query(
       'UPDATE care_needs SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
       ['cancelled', req.params.id]
     );
 
+    // 常护订单只占本周这一格：自动生成的排班占用直接删除；若是在护工原有排班上占用，则只解除订单关联。
+    await client.query(
+      'DELETE FROM worker_schedules WHERE order_id = $1 AND is_auto = TRUE',
+      [req.params.id]
+    );
+    await client.query(
+      `UPDATE worker_schedules
+       SET order_id = NULL, recurring_plan_id = NULL, is_available = TRUE
+       WHERE order_id = $1`,
+      [req.params.id]
+    );
+
+    await client.query('COMMIT');
+    inTransaction = false;
+
     res.json({ message: '已取消', need: result.rows[0] });
   } catch (error) {
+    if (client && inTransaction) {
+      await client.query('ROLLBACK');
+    }
     sendServerError(res, error);
+  } finally {
+    client?.release();
   }
 });
 

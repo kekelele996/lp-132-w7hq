@@ -39,8 +39,8 @@ const Favorites = () => {
     navigate('/messages', { state: { userId: workerId } });
   };
 
-  const handleBook = (_workerId: string) => {
-    navigate('/publish');
+  const handleBook = (workerId: string) => {
+    navigate('/recurring-care', { state: { workerId } });
   };
 
   return (

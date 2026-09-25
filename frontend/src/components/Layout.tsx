@@ -41,6 +41,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     { key: '/', icon: <HomeOutlined />, label: '需求广场' },
     { key: '/elderly', icon: <UserOutlined />, label: '老人档案' },
     { key: '/publish', icon: <FileTextOutlined />, label: '发布需求' },
+    { key: '/recurring-care', icon: <CalendarOutlined />, label: '常护安排' },
     { key: '/my-orders', icon: <HeartOutlined />, label: '我的订单' },
     { key: '/favorites', icon: <StarOutlined />, label: '收藏护工' },
     { key: '/messages', icon: <Badge count={unreadCount} size="small"><MessageOutlined /></Badge>, label: '消息中心' },

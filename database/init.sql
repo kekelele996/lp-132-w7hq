@@ -65,6 +65,32 @@ CREATE TABLE IF NOT EXISTS care_needs (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 常护安排表（每次提交生成未来四周订单）
+CREATE TABLE IF NOT EXISTS recurring_care_plans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    child_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    elderly_id UUID NOT NULL REFERENCES elderly_profiles(id) ON DELETE CASCADE,
+    worker_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    weekday INTEGER NOT NULL CHECK (weekday >= 0 AND weekday <= 6),
+    shift_type VARCHAR(20) NOT NULL CHECK (shift_type IN ('morning', 'afternoon', 'evening', 'full')),
+    title VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    care_type VARCHAR(50) NOT NULL,
+    address TEXT NOT NULL,
+    duration_hours DECIMAL(4, 2),
+    price DECIMAL(10, 2),
+    start_date DATE NOT NULL,
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 常护安排生成的订单归属同一计划，recurrence_week 从 1 到 4
+ALTER TABLE care_needs
+    ADD COLUMN IF NOT EXISTS recurring_plan_id UUID REFERENCES recurring_care_plans(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS recurrence_week INTEGER CHECK (recurrence_week BETWEEN 1 AND 4),
+    ADD COLUMN IF NOT EXISTS shift_type VARCHAR(20) CHECK (shift_type IN ('morning', 'afternoon', 'evening', 'full'));
+
 -- 评价表
 CREATE TABLE IF NOT EXISTS reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -107,6 +133,11 @@ CREATE TABLE IF NOT EXISTS worker_schedules (
     UNIQUE(worker_id, date, shift_type)
 );
 
+-- 常护安排占用排班时段；is_auto 区分系统自动占用和护工手工排班
+ALTER TABLE worker_schedules
+    ADD COLUMN IF NOT EXISTS recurring_plan_id UUID REFERENCES recurring_care_plans(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS is_auto BOOLEAN DEFAULT FALSE;
+
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_elderly_child ON elderly_profiles(child_id);
@@ -119,6 +150,11 @@ CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(receiver_id, is_read)
 CREATE INDEX IF NOT EXISTS idx_reviews_reviewee ON reviews(reviewee_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_worker ON worker_schedules(worker_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_date ON worker_schedules(date);
+CREATE INDEX IF NOT EXISTS idx_recurring_plans_child ON recurring_care_plans(child_id);
+CREATE INDEX IF NOT EXISTS idx_recurring_plans_worker ON recurring_care_plans(worker_id);
+CREATE INDEX IF NOT EXISTS idx_care_needs_recurring_plan ON care_needs(recurring_plan_id);
+CREATE INDEX IF NOT EXISTS idx_care_needs_worker_active_time ON care_needs(worker_id, status, start_time);
+CREATE INDEX IF NOT EXISTS idx_schedules_recurring_plan ON worker_schedules(recurring_plan_id);
 
 -- 插入测试数据 (密码统一为: 123456)
 INSERT INTO users (username, password, real_name, phone, role, age, address, skills, introduction) VALUES
